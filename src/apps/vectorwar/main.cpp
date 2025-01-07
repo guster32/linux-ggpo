@@ -8,6 +8,24 @@
 // Callback for key press events
 gboolean on_key_press(GtkWidget *widget, GdkEventKey *event, gpointer data) {
     switch (event->keyval) {
+    case GDK_KEY_Up:
+        input_state.up_pressed = true;
+        break;
+    case GDK_KEY_Down:
+        input_state.down_pressed = true;
+        break;
+    case GDK_KEY_Left:
+        input_state.left_pressed = true;
+        break;
+    case GDK_KEY_Right:
+        input_state.right_pressed = true;
+        break;
+    case GDK_KEY_d:
+        input_state.fire_pressed = true;
+        break;
+    case GDK_KEY_s:
+        input_state.bomb_pressed = true;
+        break;
     case GDK_KEY_P:
         ggpoutil_perfmon_toggle();
         break;
@@ -35,6 +53,34 @@ gboolean on_key_press(GtkWidget *widget, GdkEventKey *event, gpointer data) {
     return FALSE;
 }
 
+// Callback to handle key release events
+gboolean on_key_release(GtkWidget *widget, GdkEventKey *event, gpointer user_data) {
+    switch (event->keyval) {
+        case GDK_KEY_Up:
+            printf("up release\n");
+            input_state.up_pressed = false;
+            break;
+        case GDK_KEY_Down:
+            input_state.down_pressed = false;
+            break;
+        case GDK_KEY_Left:
+            input_state.left_pressed = false;
+            break;
+        case GDK_KEY_Right:
+            input_state.right_pressed = false;
+            break;
+        case GDK_KEY_d:
+            input_state.fire_pressed = false;
+            break;
+        case GDK_KEY_s:
+            input_state.bomb_pressed = false;
+            break;
+        default:
+            break;
+    }
+    return FALSE; // Let other handlers process this event if needed
+}
+
 // Callback for draw events
 gboolean on_draw(GtkWidget *widget, cairo_t *cr, gpointer data) {
     VectorWar_DrawCurrentFrame();
@@ -49,6 +95,7 @@ GtkWidget *create_main_window() {
 
     g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
     g_signal_connect(window, "key-press-event", G_CALLBACK(on_key_press), NULL);
+    g_signal_connect(window, "key-release-event", G_CALLBACK(on_key_release), NULL);
     g_signal_connect(window, "draw", G_CALLBACK(on_draw), NULL);
 
     return window;
@@ -56,16 +103,16 @@ GtkWidget *create_main_window() {
 
 // Main loop equivalent to RunMainLoop
 void run_main_loop(GtkWidget *window) {
-    gint64 next_frame_time = g_get_real_time();
+    static gint64 next_frame_time = g_get_real_time();
 
-    g_timeout_add(1, [](gpointer data) -> gboolean {
-        static gint64 next_frame_time = g_get_real_time();
+    g_timeout_add(10, [](gpointer data) -> gboolean {
         gint64 now = g_get_real_time();
         VectorWar_Idle(MAX(0, next_frame_time - now - 1));
         if (now >= next_frame_time) {
-            VectorWar_RunFrame(GTK_WIDGET(data));
+            VectorWar_RunFrame();
             next_frame_time = now + (1000000 / 60); // 60 FPS
         }
+        next_frame_time = g_get_real_time();
         return TRUE;
     }, window);
 
@@ -95,7 +142,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    GGPOPlayer players[GGPO_MAX_PLAYERS] = {};
+    GGPOPlayer players[GGPO_MAX_SPECTATORS + GGPO_MAX_PLAYERS] = {};
     int local_player = -1;
 
     for (int i = 0; i < num_players; ++i) {

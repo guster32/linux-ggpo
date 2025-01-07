@@ -19,12 +19,24 @@ enum VectorWarInputs {
    INPUT_FIRE              = (1 << 4),
    INPUT_BOMB              = (1 << 5),
 };
+// Structure to track the current state of key inputs
+typedef struct {
+    bool up_pressed;
+    bool down_pressed;
+    bool left_pressed;
+    bool right_pressed;
+    bool fire_pressed;
+    bool bomb_pressed;
+} InputState;
+
+// Global variable to store the current input state
+extern InputState input_state;
 
 void VectorWar_Init(GtkWidget *widget, unsigned short localport, int num_players, GGPOPlayer *players, int num_spectators);
 void VectorWar_InitSpectator(GtkWidget *widget, unsigned short localport, int num_players, char *host_ip, unsigned short host_port);
 void VectorWar_DrawCurrentFrame();
 void VectorWar_AdvanceFrame(int inputs[], int disconnect_flags);
-void VectorWar_RunFrame(GtkWidget *widget);
+void VectorWar_RunFrame();
 void VectorWar_Idle(int time);
 void VectorWar_DisconnectPlayer(int player);
 void VectorWar_Exit();

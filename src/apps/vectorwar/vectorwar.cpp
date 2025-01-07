@@ -13,7 +13,7 @@ GameState gs = { 0 };
 NonGameState ngs = { 0 };
 Renderer *renderer = nullptr;
 GGPOSession *ggpo = nullptr;
-
+InputState input_state = {false, false, false, false, false, false};
 /*
  * Simple checksum function stolen from Wikipedia:
  *   http://en.wikipedia.org/wiki/Fletcher%27s_checksum
@@ -205,18 +205,59 @@ void VectorWar_AdvanceFrame(int inputs[], int disconnect_flags) {
    ggpoutil_perfmon_update(ggpo, nullptr, 0);
 }
 
-void VectorWar_RunFrame(GtkWidget *widget) {
-   int inputs[MAX_SHIPS] = { 0 };
+/*
+ * ReadInputs --
+ *
+ * Read the inputs for player 1 from the keyboard.  We never have to
+ * worry about player 2.  GGPO will handle remapping his inputs 
+ * transparently.
+ */
+int ReadInputs() {
+    int inputs = 0;
+
+   if (input_state.up_pressed) {
+        inputs |= VectorWarInputs::INPUT_THRUST;
+    }
+    if (input_state.down_pressed) {
+        inputs |= VectorWarInputs::INPUT_BREAK;
+    }
+    if (input_state.left_pressed) {
+        inputs |= VectorWarInputs::INPUT_ROTATE_LEFT;
+    }
+    if (input_state.right_pressed) {
+        inputs |= VectorWarInputs::INPUT_ROTATE_RIGHT;
+    }
+    if (input_state.fire_pressed) {
+        inputs |= VectorWarInputs::INPUT_FIRE;
+    }
+    if (input_state.bomb_pressed) {
+        inputs |= VectorWarInputs::INPUT_BOMB;
+    }
+
+    return inputs;
+}
+
+void VectorWar_RunFrame() {
+   GGPOErrorCode result = GGPO_OK;
    int disconnect_flags;
+   int inputs[MAX_SHIPS] = { 0 };
 
    if (ngs.local_player_handle != GGPO_INVALID_HANDLE) {
-      int input = 0; // Replace with actual input reading logic
-      ggpo_add_local_input(ggpo, ngs.local_player_handle, &input, sizeof(input));
+      int input = ReadInputs();
+#if defined(SYNC_TEST)
+      input = rand(); // test: use random inputs to demonstrate sync testing
+#endif
+      result = ggpo_add_local_input(ggpo, ngs.local_player_handle, &input, sizeof(input));
    }
 
-   if (GGPO_SUCCEEDED(ggpo_synchronize_input(ggpo, (void *)inputs, sizeof(int) * MAX_SHIPS, &disconnect_flags))) {
-      VectorWar_AdvanceFrame(inputs, disconnect_flags);
-   }
+  if (GGPO_SUCCEEDED(result)) {
+     result = ggpo_synchronize_input(ggpo, (void *)inputs, sizeof(int) * MAX_SHIPS, &disconnect_flags);
+     if (GGPO_SUCCEEDED(result)) {
+         // inputs[0] and inputs[1] contain the inputs for p1 and p2.  Advance
+         // the game by 1 frame using those inputs.
+         VectorWar_AdvanceFrame(inputs, disconnect_flags);
+     }
+  }
 
    VectorWar_DrawCurrentFrame();
 }

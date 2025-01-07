@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
     {
-        "name": "Debug VectorWar",
+        "name": "Debug VectorWar P1",
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/build/src/apps/vectorwar/VectorWar",
@@ -13,7 +13,36 @@
             "7000",
             "2",
             "local",
-            "127.0.0.1:7001"
+            "127.0.0.1:7001",
+        ],
+        "stopAtEntry": false,
+        "cwd": "${fileDirname}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            },
+            {
+                "description": "Set Disassembly Flavor to Intel",
+                "text": "-gdb-set disassembly-flavor intel",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "Debug VectorWar P2",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/build/src/apps/vectorwar/VectorWar",
+        "args": [
+            "7001",
+            "2",
+            "127.0.0.1:7000",
+            "local",
         ],
         "stopAtEntry": false,
         "cwd": "${fileDirname}",
