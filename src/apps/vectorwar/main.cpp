@@ -142,15 +142,47 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    GGPOPlayer players[GGPO_MAX_SPECTATORS + GGPO_MAX_PLAYERS] = {};
-    int local_player = -1;
+    if (strcmp(argv[3], "spectate") == 0) {
+        char host_ip[128];
+        unsigned short host_port;
 
-    for (int i = 0; i < num_players; ++i) {
-        if (std::strcmp(argv[3 + i], "local") == 0) {
-            players[i].type = GGPO_PLAYERTYPE_LOCAL;
-            players[i].player_num = i + 1;
-            local_player = i;
-        } else {
+        // Parse "<host_ip>:<port>" from argv[offset+1]
+        if (sscanf(argv[3 + 1], "%127[^:]:%hu", host_ip, &host_port) != 2) {
+            syntax();
+            return 1;
+        }
+
+        // Initialize spectator mode
+        VectorWar_InitSpectator(window, local_port, num_players, host_ip, host_port);
+    } else {
+
+        GGPOPlayer players[GGPO_MAX_SPECTATORS + GGPO_MAX_PLAYERS] = {};
+        int local_player = -1;
+
+        for (int i = 0; i < num_players; ++i) {
+            if (std::strcmp(argv[3 + i], "local") == 0) {
+                players[i].type = GGPO_PLAYERTYPE_LOCAL;
+                players[i].player_num = i + 1;
+                local_player = i;
+            } else {
+                char *ip_port = argv[3 + i];
+                char *colon = std::strchr(ip_port, ':');
+                if (!colon) {
+                    syntax();
+                    return 1;
+                }
+
+                *colon = '\0';
+                players[i].type = GGPO_PLAYERTYPE_REMOTE;
+                players[i].player_num = i + 1;
+                std::strncpy(players[i].u.remote.ip_address, ip_port, sizeof(players[i].u.remote.ip_address) - 1);
+                players[i].u.remote.port = static_cast<unsigned short>(std::atoi(colon + 1));
+            }
+        }
+
+        // Parse spectators
+        int num_spectators = 0;
+        for (int i = num_players; 3 + i < argc; ++i) { // Remaining arguments
             char *ip_port = argv[3 + i];
             char *colon = std::strchr(ip_port, ':');
             if (!colon) {
@@ -158,15 +190,21 @@ int main(int argc, char *argv[]) {
                 return 1;
             }
 
-            *colon = '\0';
-            players[i].type = GGPO_PLAYERTYPE_REMOTE;
-            players[i].player_num = i + 1;
-            std::strncpy(players[i].u.remote.ip_address, ip_port, sizeof(players[i].u.remote.ip_address) - 1);
-            players[i].u.remote.port = static_cast<unsigned short>(std::atoi(colon + 1));
+            *colon = '\0'; // Split into IP and port
+            players[num_players + num_spectators].type = GGPO_PLAYERTYPE_SPECTATOR;
+            std::strncpy(players[num_players + num_spectators].u.remote.ip_address, ip_port, sizeof(players[num_players + num_spectators].u.remote.ip_address) - 1);
+            players[num_players + num_spectators].u.remote.port = static_cast<unsigned short>(std::atoi(colon + 1));
+            ++num_spectators;
         }
-    }
 
-    VectorWar_Init(window, local_port, num_players, players, 0);
+        // Set window position for the local player if applicable
+        // if (local_player >= 0 && local_player < sizeof(window_offsets) / sizeof(window_offsets[0])) {
+        //     gtk_window_move(GTK_WINDOW(window), window_offsets[local_player].x, window_offsets[local_player].y);
+        // }
+
+
+        VectorWar_Init(window, local_port, num_players, players, num_spectators);
+    }
     run_main_loop(window);
     VectorWar_Exit();
 

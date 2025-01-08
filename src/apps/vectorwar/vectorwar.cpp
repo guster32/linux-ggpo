@@ -177,6 +177,39 @@ void VectorWar_Init(GtkWidget *widget, unsigned short localport, int num_players
    renderer->SetStatusText("Connecting to peers.");
 }
 
+/*
+ * VectorWar_InitSpectator --
+ *
+ * Create a new spectator session
+ */
+void
+VectorWar_InitSpectator(GtkWidget *widget, unsigned short localport, int num_players, char *host_ip, unsigned short host_port)
+{
+   GGPOErrorCode result;
+   renderer = new GTKRenderer(widget);
+
+   // Initialize the game state
+   gs.Init(widget, num_players);
+   ngs.num_players = num_players;
+
+   // Fill in a ggpo callbacks structure to pass to start_session.
+   GGPOSessionCallbacks cb = { 0 };
+   cb.begin_game      = vw_begin_game_callback;
+   cb.advance_frame	  = vw_advance_frame_callback;
+   cb.load_game_state = vw_load_game_state_callback;
+   cb.save_game_state = vw_save_game_state_callback;
+   cb.free_buffer     = vw_free_buffer;
+   cb.on_event        = vw_on_event_callback;
+   cb.log_game_state  = vw_log_game_state;
+
+   result = ggpo_start_spectating(&ggpo, &cb, "vectorwar", num_players, sizeof(int), localport, host_ip, host_port);
+
+   ggpoutil_perfmon_init(widget);
+
+   renderer->SetStatusText("Starting new spectator session");
+}
+
+
 void VectorWar_DisconnectPlayer(int player) {
    if (player < ngs.num_players) {
       GGPOErrorCode result = ggpo_disconnect_player(ggpo, ngs.players[player].handle);
